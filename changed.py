@@ -171,6 +171,7 @@ class Attention(nn.Module):
         self.attn_dim = attn_dim
         self.attn_in = (enc_hid_dim * 2) + dec_hid_dim
         self.attn = nn.Linear(self.attn_in, attn_dim)
+        self.V = nn.Linear(1, attn_dim)
 
     def forward(self,decoder_hidden, encoder_outputs):
         src_len = encoder_outputs.shape[0]
@@ -179,13 +180,11 @@ class Attention(nn.Module):
 
         encoder_outputs = encoder_outputs.permute(1, 0, 2)
 
-        energy = torch.tanh(self.attn(torch.cat((
+        energy = self.V(torch.tanh(self.attn(torch.cat((
             repeated_decoder_hidden,
             encoder_outputs),
-            dim = 2)))
-
+            dim=2))))
         attention = torch.sum(energy, dim=2)
-
         return F.softmax(attention, dim=1)
 
 
@@ -195,13 +194,11 @@ class Intrattention(nn.Module):
         self.dec_hid_dim = dec_hid_dim
         self.intrattn_dim = intrattn_dim
         self.intrattn = nn.Linear(dec_hid_dim, intrattn_dim)
-    def forward(self,decoder_hidden):
-        decoder_hidden
 
-
-
-
-
+    def forward(self, decoder_hiddens): # 此处需要 decoder  all hidden_state
+        energy = torch.tanh(self.intrattn(decoder_hiddens))
+        intra_attn = torch.sum(energy, dim=2)
+        return F.softmax(intra_attn, dim=1)
 
 class Decoder(nn.Module):
     def __init__(self,
